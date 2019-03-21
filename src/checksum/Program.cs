@@ -1,4 +1,17 @@
-﻿using System;
+﻿/*
+
+Original code from: https://github.com/ferventcoder/checksum
+License: Apache v2
+
+My changes in March 2019
+------------------------
+use sha256 as the default checksum
+output results in all lowercase
+cleaned up usage output
+
+*/
+
+using System;
 using System.Globalization;
 using System.IO;
 using System.Security.Cryptography;
@@ -60,7 +73,7 @@ namespace checksum
                 }
             }
 
-            HashAlgorithm hash_util = new MD5CryptoServiceProvider();
+            HashAlgorithm hash_util = new SHA256CryptoServiceProvider();
 
             if (configuration.HashType.ToLowerSafe() == SHA1)
             {
@@ -74,6 +87,10 @@ namespace checksum
             {
                 hash_util = new SHA512CryptoServiceProvider();
             }
+            else if (configuration.HashType.ToLowerSafe() == MD5)
+            {
+                hash_util = new MD5CryptoServiceProvider();
+            }
 
             //todo: Wonder if we need to flip this for perf on very large files: http://stackoverflow.com/a/13926809
             var hash = hash_util.ComputeHash(File.Open(configuration.FilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite));
@@ -82,7 +99,7 @@ namespace checksum
 
             if (string.IsNullOrWhiteSpace(configuration.HashToCheck))
             {
-                Console.WriteLine(hash_string);
+                Console.WriteLine(hash_string.ToLowerSafe());
                 pause_execution_if_debug();
                 Environment.Exit(0);
             }
@@ -91,7 +108,7 @@ namespace checksum
 
             if (result != 0)
             {
-                Console.WriteLine("Error - hashes do not match. Actual value was '{0}'.", hash_string);
+                Console.WriteLine("Error - hashes do not match. Actual value was: {0}", hash_string.ToLowerSafe());
                 Environment.ExitCode = 1;
             }
             else
@@ -129,7 +146,7 @@ namespace checksum
                      "REQUIRED: file - The is the name of the file. The file should exist. You do not need to specify -f or -file in front of this argument.",
                      option => configuration.FilePath = option)
                 .Add("t=|type=|hashtype=",
-                     "Optional: hashtype - 'md5', 'sha1', 'sha256' or 'sha512'. Defaults to 'md5' or is determined by length of passed check value.",
+                     "Optional: hashtype - 'md5', 'sha1', 'sha256' or 'sha512'. Defaults to 'sha256' or is determined by length of passed check value.",
                      option => configuration.HashType = option)
                  .Add("c=|check=",
                      "Optional: check - the signature you want to check. Not case sensitive.",
@@ -168,12 +185,18 @@ namespace checksum
         /// <param name="option_set">The option_set.</param>
         private static void show_help(OptionSet option_set)
         {
-            Console.WriteLine("checksum - File CheckSum Validator - Apache v2");
+            Console.WriteLine("");
+            Console.WriteLine("checksum - File CheckSum Validator - https://github.com/ferventcoder/checksum");
+            Console.WriteLine("                    forked version - https://github.com/jftuga/checksum");
+            Console.WriteLine("License: Apache v2");
+            Console.WriteLine("");
             Console.WriteLine("checksum checks a file and returns a check sum for md5, sha1, sha256 and sha512.");
+            Console.WriteLine("");
             Console.WriteLine("To use checksum you would simply provide a file path and it will return the sum for the file.");
             Console.WriteLine("  Example: checksum -f=\"a\\relative\\path\"");
             Console.WriteLine("  Example: checksum -f=\"a\\relative\\path\"");
             Console.WriteLine("  Example: checksum \"a\\relative\\path\" -t=sha256");
+            Console.WriteLine("");
             Console.WriteLine("You can also check against an existing signature.");
             Console.WriteLine("To validate against an existing signature (hash) you would simply provide");
             Console.WriteLine(" the file and the expected signature. When checking a signature, if the ");
@@ -183,6 +206,7 @@ namespace checksum
             Console.WriteLine("");
             Console.WriteLine(" == Synopsis == ");
             Console.WriteLine("  checksum [-t=sha1|sha256|sha512|md5] [-c=signature] [-f=]filepath");
+            Console.WriteLine("");
             Console.WriteLine("== Options ==");
             option_set.WriteOptionDescriptions(Console.Error);
 
